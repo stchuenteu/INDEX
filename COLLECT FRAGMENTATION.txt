@@ -1,0 +1,80 @@
+USE [master]
+GO
+
+/****** Object:  StoredProcedure [dbo].[SP_Collects_Fragmentation]    Script Date: 5/18/2022 4:41:51 PM ******/
+SET ANSI_NULLS ON
+GO
+
+SET QUOTED_IDENTIFIER ON
+GO
+
+
+CREATE Procedure [dbo].[SP_Collects_Fragmentation]
+As
+
+ /***************************************************************************************************
+ Object:  StoredProcedure [dbo].[sp_IndexCollection]    Script Date: 9/23/2015 3:55:29 PM 
+
+ Developed by		:		Kishore
+ This SP will collect the fragmentation values and inserver in to table master.DBO.tbl_FragmentedIndexes
+
+ Once run this SP need to run below two update queries
+
+  **************************************************************************************************/
+  
+If exists (select * from master.sys.all_objects where name like 'tbl_FragmentedIndexes' ) 
+		drop table master.dbo.Tbl_FragmentedIndexes;
+	create table master.dbo.Tbl_FragmentedIndexes 
+(DatabaseName varchar(100),Objects_id int, TableName varchar(100),Index_id int,partition_number int, 
+indexName varchar(100),avg_fragmentation_percent float,IndexType varchar(100),IndexsizeKB int, Schemaname varchar(100), Action_Required varchar(100) default 'NA') 
+
+
+	insert into master.dbo.Tbl_FragmentedIndexes (DatabaseName,Objects_id,TableName,Index_id,partition_number, 
+	indexName,avg_fragmentation_percent,IndexType,IndexsizeKB,Schemaname) 
+ 
+		exec master.sys.sp_MSforeachdb ' USE [?]
+	IF ''?'' <> ''master'' AND ''?'' <> ''model'' AND ''?'' <> ''msdb'' AND ''?'' <> ''tempdb'' 
+	SELECT db_name() as DatabaseName, a.Object_id, OBJECT_NAME (a.object_id) as TableName,  
+	a.index_id, a.partition_number, b.name as IndexName, 
+	avg_fragmentation_in_percent, 
+	index_type_desc,
+	8 * SUM(i.used_pages) AS ''IndexsizeKB'',
+	s.name as Schemaname 
+	FROM sys.dm_db_index_physical_stats (db_id(), NULL, NULL, NULL, NULL) AS a 
+	JOIN sys.partitions AS p ON p.OBJECT_ID = a.OBJECT_ID AND p.index_id = a.index_id
+	JOIN sys.allocation_units AS i ON i.container_id = p.partition_id
+    JOIN sys.objects AS o on o.object_id = a.OBJECT_ID
+	JOIN sys.schemas as s ON s.schema_id = o.schema_id
+	JOIN sys.indexes AS b ON a.object_id = b.object_id AND a.index_id = b.index_id
+    WHERE b.index_id <> 0 and avg_fragmentation_in_percent <>0 
+	GROUP BY a.OBJECT_ID,a.index_id,a.partition_number,b.name,avg_fragmentation_in_percent, s.name,index_type_desc'
+
+
+--Once run above SP. need to run below two update queries
+
+	update master.dbo.tbl_FragmentedIndexes 
+	set Action_Required ='Rebuild' 
+	where avg_fragmentation_percent >30;  
+
+ 
+	update master.dbo.tbl_FragmentedIndexes 
+	set Action_Required ='Reorganize' 
+	where avg_fragmentation_percent between 5 and 30;
+
+	--Make it index as Re-org instead of Online rebuild indexes. It fail, due to index data type text, ntext, image or FILESTREAM 
+	update master.dbo.tbl_FragmentedIndexes 
+	set Action_Required ='Reorganize' 
+	where indexName in('PK_GSFS_IPS_StoredEvent','PK_GSFS_IPS_APGroup',
+	'PK_GSFS_IPS_JE_GL_EXPORT','PK_PresentationPublish','PK_GSFS_AP_Invoice','PK_DataStore','PK_Class',
+	'PK_GSFS_IPS_SCSContractDetail','PK_tblStatements','PK_GSFS_IPS_GACGroupActivityHistory','PK_CI_Report','PK_IOMap','PK_GSFS_IPS_PaymentInfoActivityHistory');
+
+	update master.dbo.tbl_FragmentedIndexes 
+	set Action_Required ='NA' 
+	where indexName in('idx_Clust_ContClmClmDtl');
+	
+	Delete from [dbo].[Tbl_FragmentedIndexes] where DatabaseName LIKE 'scs_auto_qa%'
+
+
+  /*******************************************************/ 
+
+--select * from master.dbo.tbl_FragmentedIndexes
