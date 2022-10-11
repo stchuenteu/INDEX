@@ -1,0 +1,853 @@
+
+
+USE [msdb]
+GO
+
+/****** Object:  Job [CHECKDB]    Script Date: 10/7/2022 3:33:29 PM ******/
+BEGIN TRANSACTION
+DECLARE @ReturnCode INT
+SELECT @ReturnCode = 0
+/****** Object:  JobCategory [[Uncategorized (Local)]]    Script Date: 10/7/2022 3:33:29 PM ******/
+IF NOT EXISTS (SELECT name FROM msdb.dbo.syscategories WHERE name=N'[Uncategorized (Local)]' AND category_class=1)
+BEGIN
+EXEC @ReturnCode = msdb.dbo.sp_add_category @class=N'JOB', @type=N'LOCAL', @name=N'[Uncategorized (Local)]'
+IF (@@ERROR <> 0 OR @ReturnCode <> 0) GOTO QuitWithRollback
+
+END
+
+DECLARE @jobId BINARY(16)
+EXEC @ReturnCode =  msdb.dbo.sp_add_job @job_name=N'CHECKDB', 
+		@enabled=1, 
+		@notify_level_eventlog=0, 
+		@notify_level_email=2, 
+		@notify_level_netsend=0, 
+		@notify_level_page=0, 
+		@delete_level=0, 
+		@description=N'No description available.', 
+		@category_name=N'[Uncategorized (Local)]', 
+		@owner_login_name=N'FLXPRD\sql_jobs', 
+		@notify_email_operator_name=N'DBA_Operator', @job_id = @jobId OUTPUT
+IF (@@ERROR <> 0 OR @ReturnCode <> 0) GOTO QuitWithRollback
+/****** Object:  Step [CHK]    Script Date: 10/7/2022 3:33:29 PM ******/
+EXEC @ReturnCode = msdb.dbo.sp_add_jobstep @job_id=@jobId, @step_name=N'CHK', 
+		@step_id=1, 
+		@cmdexec_success_code=0, 
+		@on_success_action=1, 
+		@on_success_step_id=0, 
+		@on_fail_action=2, 
+		@on_fail_step_id=0, 
+		@retry_attempts=0, 
+		@retry_interval=0, 
+		@os_run_priority=0, @subsystem=N'TSQL', 
+		@command=N'DBCC CHECKDB(N''FLXMI4'')  WITH NO_INFOMSGS
+', 
+		@database_name=N'master', 
+		@flags=4
+IF (@@ERROR <> 0 OR @ReturnCode <> 0) GOTO QuitWithRollback
+EXEC @ReturnCode = msdb.dbo.sp_update_job @job_id = @jobId, @start_step_id = 1
+IF (@@ERROR <> 0 OR @ReturnCode <> 0) GOTO QuitWithRollback
+EXEC @ReturnCode = msdb.dbo.sp_add_jobserver @job_id = @jobId, @server_name = N'(local)'
+IF (@@ERROR <> 0 OR @ReturnCode <> 0) GOTO QuitWithRollback
+COMMIT TRANSACTION
+GOTO EndSave
+QuitWithRollback:
+    IF (@@TRANCOUNT > 0) ROLLBACK TRANSACTION
+EndSave:
+GO
+
+/****** Object:  Job [Database Mirroring Monitor Job]    Script Date: 10/7/2022 3:33:29 PM ******/
+BEGIN TRANSACTION
+DECLARE @ReturnCode INT
+SELECT @ReturnCode = 0
+/****** Object:  JobCategory [[Uncategorized (Local)]]    Script Date: 10/7/2022 3:33:29 PM ******/
+IF NOT EXISTS (SELECT name FROM msdb.dbo.syscategories WHERE name=N'[Uncategorized (Local)]' AND category_class=1)
+BEGIN
+EXEC @ReturnCode = msdb.dbo.sp_add_category @class=N'JOB', @type=N'LOCAL', @name=N'[Uncategorized (Local)]'
+IF (@@ERROR <> 0 OR @ReturnCode <> 0) GOTO QuitWithRollback
+
+END
+
+DECLARE @jobId BINARY(16)
+EXEC @ReturnCode =  msdb.dbo.sp_add_job @job_name=N'Database Mirroring Monitor Job', 
+		@enabled=1, 
+		@notify_level_eventlog=0, 
+		@notify_level_email=2, 
+		@notify_level_netsend=0, 
+		@notify_level_page=0, 
+		@delete_level=0, 
+		@category_name=N'[Uncategorized (Local)]', 
+		@owner_login_name=N'FLXPRD\sql_jobs', 
+		@notify_email_operator_name=N'DBA_Operator', @job_id = @jobId OUTPUT
+IF (@@ERROR <> 0 OR @ReturnCode <> 0) GOTO QuitWithRollback
+/****** Object:  Step []    Script Date: 10/7/2022 3:33:29 PM ******/
+EXEC @ReturnCode = msdb.dbo.sp_add_jobstep @job_id=@jobId, @step_name=N'', 
+		@step_id=1, 
+		@cmdexec_success_code=0, 
+		@on_success_action=1, 
+		@on_success_step_id=0, 
+		@on_fail_action=2, 
+		@on_fail_step_id=0, 
+		@retry_attempts=0, 
+		@retry_interval=0, 
+		@os_run_priority=0, @subsystem=N'TSQL', 
+		@command=N'exec sys.sp_dbmmonitorupdate ', 
+		@database_name=N'msdb', 
+		@flags=0
+IF (@@ERROR <> 0 OR @ReturnCode <> 0) GOTO QuitWithRollback
+EXEC @ReturnCode = msdb.dbo.sp_update_job @job_id = @jobId, @start_step_id = 1
+IF (@@ERROR <> 0 OR @ReturnCode <> 0) GOTO QuitWithRollback
+EXEC @ReturnCode = msdb.dbo.sp_add_jobschedule @job_id=@jobId, @name=N'Database Mirroring Monitor Schedule', 
+		@enabled=1, 
+		@freq_type=4, 
+		@freq_interval=1, 
+		@freq_subday_type=4, 
+		@freq_subday_interval=1, 
+		@freq_relative_interval=0, 
+		@freq_recurrence_factor=0, 
+		@active_start_date=20191227, 
+		@active_end_date=99991231, 
+		@active_start_time=0, 
+		@active_end_time=235959, 
+		@schedule_uid=N'aff3fae2-8b89-4d74-b606-ffc9b45dcf88'
+IF (@@ERROR <> 0 OR @ReturnCode <> 0) GOTO QuitWithRollback
+EXEC @ReturnCode = msdb.dbo.sp_add_jobserver @job_id = @jobId, @server_name = N'(local)'
+IF (@@ERROR <> 0 OR @ReturnCode <> 0) GOTO QuitWithRollback
+COMMIT TRANSACTION
+GOTO EndSave
+QuitWithRollback:
+    IF (@@TRANCOUNT > 0) ROLLBACK TRANSACTION
+EndSave:
+GO
+
+/****** Object:  Job [DBA_Check_JobNotification]    Script Date: 10/7/2022 3:33:29 PM ******/
+BEGIN TRANSACTION
+DECLARE @ReturnCode INT
+SELECT @ReturnCode = 0
+/****** Object:  JobCategory [[Uncategorized (Local)]]    Script Date: 10/7/2022 3:33:29 PM ******/
+IF NOT EXISTS (SELECT name FROM msdb.dbo.syscategories WHERE name=N'[Uncategorized (Local)]' AND category_class=1)
+BEGIN
+EXEC @ReturnCode = msdb.dbo.sp_add_category @class=N'JOB', @type=N'LOCAL', @name=N'[Uncategorized (Local)]'
+IF (@@ERROR <> 0 OR @ReturnCode <> 0) GOTO QuitWithRollback
+
+END
+
+DECLARE @jobId BINARY(16)
+EXEC @ReturnCode =  msdb.dbo.sp_add_job @job_name=N'DBA_Check_JobNotification', 
+		@enabled=1, 
+		@notify_level_eventlog=0, 
+		@notify_level_email=2, 
+		@notify_level_netsend=0, 
+		@notify_level_page=0, 
+		@delete_level=0, 
+		@description=N'No description available.', 
+		@category_name=N'[Uncategorized (Local)]', 
+		@owner_login_name=N'sa', 
+		@notify_email_operator_name=N'DBA_Operator', @job_id = @jobId OUTPUT
+IF (@@ERROR <> 0 OR @ReturnCode <> 0) GOTO QuitWithRollback
+/****** Object:  Step [DBA_Check_JobNotification]    Script Date: 10/7/2022 3:33:29 PM ******/
+EXEC @ReturnCode = msdb.dbo.sp_add_jobstep @job_id=@jobId, @step_name=N'DBA_Check_JobNotification', 
+		@step_id=1, 
+		@cmdexec_success_code=0, 
+		@on_success_action=1, 
+		@on_success_step_id=0, 
+		@on_fail_action=2, 
+		@on_fail_step_id=0, 
+		@retry_attempts=0, 
+		@retry_interval=0, 
+		@os_run_priority=0, @subsystem=N'TSQL', 
+		@command=N'DECLARE @mydate datetime
+DECLARE @msg varchar(200)
+DECLARE @bdy varchar(200)
+DECLARE @SUB VARCHAR(200)
+DECLARE @oper_email NVARCHAR(200)
+
+SET NOCOUNT ON
+
+SET @mydate = getdate()
+
+SET @oper_email = ( SELECT  email_address
+                    FROM    msdb.dbo.sysoperators
+                    WHERE   name = ''DBA_Operator''
+                  )
+
+SELECT name FROM msdb..sysjobs
+WHERE notify_level_email = 0 AND enabled = 1
+
+	IF @@ROWCOUNT > 0
+	BEGIN
+
+		SET @msg = ''<html><table border="1">''
+
+		SELECT      @msg = @msg + 
+					''<tr><td>'' + ltrim(RTRIM(name)) + ''</td></tr>''
+		FROM msdb..sysjobs where notify_level_email = 0 and enabled = 1
+
+		SET @msg = @msg + ''</table></html>''
+
+		SET @SUB = ''From ''+ @@servername + '':  Jobs Created Without Failure Notification Setup.  Please Check.  '' 
+		-- send email 
+			EXEC msdb.dbo.sp_send_dbmail
+    			@recipients = @oper_email,
+
+    			@body = @msg,
+				@body_format = ''html'', 
+				@subject = @SUB
+
+	END', 
+		@database_name=N'master', 
+		@flags=0
+IF (@@ERROR <> 0 OR @ReturnCode <> 0) GOTO QuitWithRollback
+EXEC @ReturnCode = msdb.dbo.sp_update_job @job_id = @jobId, @start_step_id = 1
+IF (@@ERROR <> 0 OR @ReturnCode <> 0) GOTO QuitWithRollback
+EXEC @ReturnCode = msdb.dbo.sp_add_jobschedule @job_id=@jobId, @name=N'DBA_Check_JobNotification', 
+		@enabled=1, 
+		@freq_type=4, 
+		@freq_interval=1, 
+		@freq_subday_type=1, 
+		@freq_subday_interval=0, 
+		@freq_relative_interval=0, 
+		@freq_recurrence_factor=0, 
+		@active_start_date=20111208, 
+		@active_end_date=99991231, 
+		@active_start_time=84500, 
+		@active_end_time=235959, 
+		@schedule_uid=N'613ad33a-f296-4f58-b7ac-beb1bbc87ad4'
+IF (@@ERROR <> 0 OR @ReturnCode <> 0) GOTO QuitWithRollback
+EXEC @ReturnCode = msdb.dbo.sp_add_jobserver @job_id = @jobId, @server_name = N'(local)'
+IF (@@ERROR <> 0 OR @ReturnCode <> 0) GOTO QuitWithRollback
+COMMIT TRANSACTION
+GOTO EndSave
+QuitWithRollback:
+    IF (@@TRANCOUNT > 0) ROLLBACK TRANSACTION
+EndSave:
+GO
+
+/****** Object:  Job [DBA_Get_DatabaseInfo]    Script Date: 10/7/2022 3:33:29 PM ******/
+BEGIN TRANSACTION
+DECLARE @ReturnCode INT
+SELECT @ReturnCode = 0
+/****** Object:  JobCategory [[Uncategorized (Local)]]    Script Date: 10/7/2022 3:33:29 PM ******/
+IF NOT EXISTS (SELECT name FROM msdb.dbo.syscategories WHERE name=N'[Uncategorized (Local)]' AND category_class=1)
+BEGIN
+EXEC @ReturnCode = msdb.dbo.sp_add_category @class=N'JOB', @type=N'LOCAL', @name=N'[Uncategorized (Local)]'
+IF (@@ERROR <> 0 OR @ReturnCode <> 0) GOTO QuitWithRollback
+
+END
+
+DECLARE @jobId BINARY(16)
+EXEC @ReturnCode =  msdb.dbo.sp_add_job @job_name=N'DBA_Get_DatabaseInfo', 
+		@enabled=1, 
+		@notify_level_eventlog=0, 
+		@notify_level_email=2, 
+		@notify_level_netsend=0, 
+		@notify_level_page=0, 
+		@delete_level=0, 
+		@description=N'The purpose of the job is to identify space consumption / growth of databases.', 
+		@category_name=N'[Uncategorized (Local)]', 
+		@owner_login_name=N'FLXPRD\sql_jobs', 
+		@notify_email_operator_name=N'DBA_Operator', @job_id = @jobId OUTPUT
+IF (@@ERROR <> 0 OR @ReturnCode <> 0) GOTO QuitWithRollback
+/****** Object:  Step [DBA_Get_DatabaseInfo]    Script Date: 10/7/2022 3:33:29 PM ******/
+EXEC @ReturnCode = msdb.dbo.sp_add_jobstep @job_id=@jobId, @step_name=N'DBA_Get_DatabaseInfo', 
+		@step_id=1, 
+		@cmdexec_success_code=0, 
+		@on_success_action=1, 
+		@on_success_step_id=0, 
+		@on_fail_action=2, 
+		@on_fail_step_id=0, 
+		@retry_attempts=0, 
+		@retry_interval=0, 
+		@os_run_priority=0, @subsystem=N'TSQL', 
+		@command=N'EXEC FLX_DBA.[dbo].[DBA_Get_DatabaseInfo]', 
+		@database_name=N'FLX_DBA', 
+		@flags=0
+IF (@@ERROR <> 0 OR @ReturnCode <> 0) GOTO QuitWithRollback
+EXEC @ReturnCode = msdb.dbo.sp_update_job @job_id = @jobId, @start_step_id = 1
+IF (@@ERROR <> 0 OR @ReturnCode <> 0) GOTO QuitWithRollback
+EXEC @ReturnCode = msdb.dbo.sp_add_jobschedule @job_id=@jobId, @name=N'DBA_Get_DatabaseInfo', 
+		@enabled=1, 
+		@freq_type=4, 
+		@freq_interval=1, 
+		@freq_subday_type=1, 
+		@freq_subday_interval=0, 
+		@freq_relative_interval=0, 
+		@freq_recurrence_factor=0, 
+		@active_start_date=20160330, 
+		@active_end_date=99991231, 
+		@active_start_time=70000, 
+		@active_end_time=235959, 
+		@schedule_uid=N'9d449d14-6864-46ce-99fd-7b3ec43b6c6c'
+IF (@@ERROR <> 0 OR @ReturnCode <> 0) GOTO QuitWithRollback
+EXEC @ReturnCode = msdb.dbo.sp_add_jobserver @job_id = @jobId, @server_name = N'(local)'
+IF (@@ERROR <> 0 OR @ReturnCode <> 0) GOTO QuitWithRollback
+COMMIT TRANSACTION
+GOTO EndSave
+QuitWithRollback:
+    IF (@@TRANCOUNT > 0) ROLLBACK TRANSACTION
+EndSave:
+GO
+
+/****** Object:  Job [DBA_Monitor_DBFiles]    Script Date: 10/7/2022 3:33:29 PM ******/
+BEGIN TRANSACTION
+DECLARE @ReturnCode INT
+SELECT @ReturnCode = 0
+/****** Object:  JobCategory [[Uncategorized (Local)]]    Script Date: 10/7/2022 3:33:29 PM ******/
+IF NOT EXISTS (SELECT name FROM msdb.dbo.syscategories WHERE name=N'[Uncategorized (Local)]' AND category_class=1)
+BEGIN
+EXEC @ReturnCode = msdb.dbo.sp_add_category @class=N'JOB', @type=N'LOCAL', @name=N'[Uncategorized (Local)]'
+IF (@@ERROR <> 0 OR @ReturnCode <> 0) GOTO QuitWithRollback
+
+END
+
+DECLARE @jobId BINARY(16)
+EXEC @ReturnCode =  msdb.dbo.sp_add_job @job_name=N'DBA_Monitor_DBFiles', 
+		@enabled=1, 
+		@notify_level_eventlog=0, 
+		@notify_level_email=2, 
+		@notify_level_netsend=0, 
+		@notify_level_page=0, 
+		@delete_level=0, 
+		@description=N'No description available.', 
+		@category_name=N'[Uncategorized (Local)]', 
+		@owner_login_name=N'sa', 
+		@notify_email_operator_name=N'DBA_Operator', @job_id = @jobId OUTPUT
+IF (@@ERROR <> 0 OR @ReturnCode <> 0) GOTO QuitWithRollback
+/****** Object:  Step [DBA_Monitor_DBFiles]    Script Date: 10/7/2022 3:33:29 PM ******/
+EXEC @ReturnCode = msdb.dbo.sp_add_jobstep @job_id=@jobId, @step_name=N'DBA_Monitor_DBFiles', 
+		@step_id=1, 
+		@cmdexec_success_code=0, 
+		@on_success_action=1, 
+		@on_success_step_id=0, 
+		@on_fail_action=2, 
+		@on_fail_step_id=0, 
+		@retry_attempts=0, 
+		@retry_interval=0, 
+		@os_run_priority=0, @subsystem=N'TSQL', 
+		@command=N'EXEC FLX_DBA..DBA_Monitor_DBFiles', 
+		@database_name=N'FLX_DBA', 
+		@flags=0
+IF (@@ERROR <> 0 OR @ReturnCode <> 0) GOTO QuitWithRollback
+EXEC @ReturnCode = msdb.dbo.sp_update_job @job_id = @jobId, @start_step_id = 1
+IF (@@ERROR <> 0 OR @ReturnCode <> 0) GOTO QuitWithRollback
+EXEC @ReturnCode = msdb.dbo.sp_add_jobschedule @job_id=@jobId, @name=N'DBA_Monitor_DBFiles', 
+		@enabled=1, 
+		@freq_type=8, 
+		@freq_interval=42, 
+		@freq_subday_type=1, 
+		@freq_subday_interval=0, 
+		@freq_relative_interval=0, 
+		@freq_recurrence_factor=1, 
+		@active_start_date=20161104, 
+		@active_end_date=99991231, 
+		@active_start_time=93000, 
+		@active_end_time=235959, 
+		@schedule_uid=N'd944f767-6d93-4bf7-afe1-47a2006eb38b'
+IF (@@ERROR <> 0 OR @ReturnCode <> 0) GOTO QuitWithRollback
+EXEC @ReturnCode = msdb.dbo.sp_add_jobserver @job_id = @jobId, @server_name = N'(local)'
+IF (@@ERROR <> 0 OR @ReturnCode <> 0) GOTO QuitWithRollback
+COMMIT TRANSACTION
+GOTO EndSave
+QuitWithRollback:
+    IF (@@TRANCOUNT > 0) ROLLBACK TRANSACTION
+EndSave:
+GO
+
+/****** Object:  Job [DBA_Monitor_DiskFreeSpace]    Script Date: 10/7/2022 3:33:29 PM ******/
+BEGIN TRANSACTION
+DECLARE @ReturnCode INT
+SELECT @ReturnCode = 0
+/****** Object:  JobCategory [[Uncategorized (Local)]]    Script Date: 10/7/2022 3:33:29 PM ******/
+IF NOT EXISTS (SELECT name FROM msdb.dbo.syscategories WHERE name=N'[Uncategorized (Local)]' AND category_class=1)
+BEGIN
+EXEC @ReturnCode = msdb.dbo.sp_add_category @class=N'JOB', @type=N'LOCAL', @name=N'[Uncategorized (Local)]'
+IF (@@ERROR <> 0 OR @ReturnCode <> 0) GOTO QuitWithRollback
+
+END
+
+DECLARE @jobId BINARY(16)
+EXEC @ReturnCode =  msdb.dbo.sp_add_job @job_name=N'DBA_Monitor_DiskFreeSpace', 
+		@enabled=1, 
+		@notify_level_eventlog=0, 
+		@notify_level_email=2, 
+		@notify_level_netsend=0, 
+		@notify_level_page=0, 
+		@delete_level=0, 
+		@description=N'No description available.', 
+		@category_name=N'[Uncategorized (Local)]', 
+		@owner_login_name=N'sa', 
+		@notify_email_operator_name=N'DBA_Operator', @job_id = @jobId OUTPUT
+IF (@@ERROR <> 0 OR @ReturnCode <> 0) GOTO QuitWithRollback
+/****** Object:  Step [DBA_Monitor_DiskFreeSpace]    Script Date: 10/7/2022 3:33:29 PM ******/
+EXEC @ReturnCode = msdb.dbo.sp_add_jobstep @job_id=@jobId, @step_name=N'DBA_Monitor_DiskFreeSpace', 
+		@step_id=1, 
+		@cmdexec_success_code=0, 
+		@on_success_action=1, 
+		@on_success_step_id=0, 
+		@on_fail_action=2, 
+		@on_fail_step_id=0, 
+		@retry_attempts=0, 
+		@retry_interval=0, 
+		@os_run_priority=0, @subsystem=N'TSQL', 
+		@command=N'EXEC FLX_DBA..DBA_Monitor_DiskFreeSpace', 
+		@database_name=N'master', 
+		@flags=0
+IF (@@ERROR <> 0 OR @ReturnCode <> 0) GOTO QuitWithRollback
+EXEC @ReturnCode = msdb.dbo.sp_update_job @job_id = @jobId, @start_step_id = 1
+IF (@@ERROR <> 0 OR @ReturnCode <> 0) GOTO QuitWithRollback
+EXEC @ReturnCode = msdb.dbo.sp_add_jobschedule @job_id=@jobId, @name=N'DBA_Monitor_DiskFreeSpace', 
+		@enabled=1, 
+		@freq_type=4, 
+		@freq_interval=1, 
+		@freq_subday_type=1, 
+		@freq_subday_interval=1, 
+		@freq_relative_interval=0, 
+		@freq_recurrence_factor=0, 
+		@active_start_date=20160622, 
+		@active_end_date=99991231, 
+		@active_start_time=90000, 
+		@active_end_time=235959, 
+		@schedule_uid=N'6c4f8124-e3c0-4b37-8acb-99a7d6fa852e'
+IF (@@ERROR <> 0 OR @ReturnCode <> 0) GOTO QuitWithRollback
+EXEC @ReturnCode = msdb.dbo.sp_add_jobserver @job_id = @jobId, @server_name = N'(local)'
+IF (@@ERROR <> 0 OR @ReturnCode <> 0) GOTO QuitWithRollback
+COMMIT TRANSACTION
+GOTO EndSave
+QuitWithRollback:
+    IF (@@TRANCOUNT > 0) ROLLBACK TRANSACTION
+EndSave:
+GO
+
+/****** Object:  Job [DBA_Monitor_Full_Differential_Backups]    Script Date: 10/7/2022 3:33:29 PM ******/
+BEGIN TRANSACTION
+DECLARE @ReturnCode INT
+SELECT @ReturnCode = 0
+/****** Object:  JobCategory [[Uncategorized (Local)]]    Script Date: 10/7/2022 3:33:29 PM ******/
+IF NOT EXISTS (SELECT name FROM msdb.dbo.syscategories WHERE name=N'[Uncategorized (Local)]' AND category_class=1)
+BEGIN
+EXEC @ReturnCode = msdb.dbo.sp_add_category @class=N'JOB', @type=N'LOCAL', @name=N'[Uncategorized (Local)]'
+IF (@@ERROR <> 0 OR @ReturnCode <> 0) GOTO QuitWithRollback
+
+END
+
+DECLARE @jobId BINARY(16)
+EXEC @ReturnCode =  msdb.dbo.sp_add_job @job_name=N'DBA_Monitor_Full_Differential_Backups', 
+		@enabled=1, 
+		@notify_level_eventlog=0, 
+		@notify_level_email=2, 
+		@notify_level_netsend=0, 
+		@notify_level_page=0, 
+		@delete_level=0, 
+		@description=N'Monitor that backups are successful and no backups missed.', 
+		@category_name=N'[Uncategorized (Local)]', 
+		@owner_login_name=N'sa', 
+		@notify_email_operator_name=N'DBA_Operator', @job_id = @jobId OUTPUT
+IF (@@ERROR <> 0 OR @ReturnCode <> 0) GOTO QuitWithRollback
+/****** Object:  Step [DBA_Monitor_Full_DBBackup]    Script Date: 10/7/2022 3:33:29 PM ******/
+EXEC @ReturnCode = msdb.dbo.sp_add_jobstep @job_id=@jobId, @step_name=N'DBA_Monitor_Full_DBBackup', 
+		@step_id=1, 
+		@cmdexec_success_code=0, 
+		@on_success_action=3, 
+		@on_success_step_id=0, 
+		@on_fail_action=2, 
+		@on_fail_step_id=0, 
+		@retry_attempts=0, 
+		@retry_interval=0, 
+		@os_run_priority=0, @subsystem=N'TSQL', 
+		@command=N'EXEC FLX_DBA..DBA_Monitor_Full_Backup', 
+		@database_name=N'FLX_DBA', 
+		@flags=0
+IF (@@ERROR <> 0 OR @ReturnCode <> 0) GOTO QuitWithRollback
+/****** Object:  Step [DBA_Monitor_Differentiall_DBBackup]    Script Date: 10/7/2022 3:33:29 PM ******/
+EXEC @ReturnCode = msdb.dbo.sp_add_jobstep @job_id=@jobId, @step_name=N'DBA_Monitor_Differentiall_DBBackup', 
+		@step_id=2, 
+		@cmdexec_success_code=0, 
+		@on_success_action=1, 
+		@on_success_step_id=0, 
+		@on_fail_action=2, 
+		@on_fail_step_id=0, 
+		@retry_attempts=0, 
+		@retry_interval=0, 
+		@os_run_priority=0, @subsystem=N'TSQL', 
+		@command=N'EXEC FLX_DBA..DBA_Monitor_Differential_Backup', 
+		@database_name=N'FLX_DBA', 
+		@flags=0
+IF (@@ERROR <> 0 OR @ReturnCode <> 0) GOTO QuitWithRollback
+EXEC @ReturnCode = msdb.dbo.sp_update_job @job_id = @jobId, @start_step_id = 1
+IF (@@ERROR <> 0 OR @ReturnCode <> 0) GOTO QuitWithRollback
+EXEC @ReturnCode = msdb.dbo.sp_add_jobschedule @job_id=@jobId, @name=N'FLX_DBA', 
+		@enabled=1, 
+		@freq_type=8, 
+		@freq_interval=126, 
+		@freq_subday_type=1, 
+		@freq_subday_interval=0, 
+		@freq_relative_interval=0, 
+		@freq_recurrence_factor=1, 
+		@active_start_date=20160314, 
+		@active_end_date=99991231, 
+		@active_start_time=70500, 
+		@active_end_time=235959, 
+		@schedule_uid=N'd38f64f3-22bd-4749-b8a6-63f6fc16b6ce'
+IF (@@ERROR <> 0 OR @ReturnCode <> 0) GOTO QuitWithRollback
+EXEC @ReturnCode = msdb.dbo.sp_add_jobserver @job_id = @jobId, @server_name = N'(local)'
+IF (@@ERROR <> 0 OR @ReturnCode <> 0) GOTO QuitWithRollback
+COMMIT TRANSACTION
+GOTO EndSave
+QuitWithRollback:
+    IF (@@TRANCOUNT > 0) ROLLBACK TRANSACTION
+EndSave:
+GO
+
+/****** Object:  Job [DBA_Monitor_Log_Backups]    Script Date: 10/7/2022 3:33:29 PM ******/
+BEGIN TRANSACTION
+DECLARE @ReturnCode INT
+SELECT @ReturnCode = 0
+/****** Object:  JobCategory [[Uncategorized (Local)]]    Script Date: 10/7/2022 3:33:29 PM ******/
+IF NOT EXISTS (SELECT name FROM msdb.dbo.syscategories WHERE name=N'[Uncategorized (Local)]' AND category_class=1)
+BEGIN
+EXEC @ReturnCode = msdb.dbo.sp_add_category @class=N'JOB', @type=N'LOCAL', @name=N'[Uncategorized (Local)]'
+IF (@@ERROR <> 0 OR @ReturnCode <> 0) GOTO QuitWithRollback
+
+END
+
+DECLARE @jobId BINARY(16)
+EXEC @ReturnCode =  msdb.dbo.sp_add_job @job_name=N'DBA_Monitor_Log_Backups', 
+		@enabled=1, 
+		@notify_level_eventlog=0, 
+		@notify_level_email=2, 
+		@notify_level_netsend=0, 
+		@notify_level_page=0, 
+		@delete_level=0, 
+		@description=N'No description available.', 
+		@category_name=N'[Uncategorized (Local)]', 
+		@owner_login_name=N'FLXPRD\sql_jobs', 
+		@notify_email_operator_name=N'DBA_Operator', @job_id = @jobId OUTPUT
+IF (@@ERROR <> 0 OR @ReturnCode <> 0) GOTO QuitWithRollback
+/****** Object:  Step [DBA_Monitor_Log_Backups]    Script Date: 10/7/2022 3:33:29 PM ******/
+EXEC @ReturnCode = msdb.dbo.sp_add_jobstep @job_id=@jobId, @step_name=N'DBA_Monitor_Log_Backups', 
+		@step_id=1, 
+		@cmdexec_success_code=0, 
+		@on_success_action=1, 
+		@on_success_step_id=0, 
+		@on_fail_action=2, 
+		@on_fail_step_id=0, 
+		@retry_attempts=0, 
+		@retry_interval=0, 
+		@os_run_priority=0, @subsystem=N'TSQL', 
+		@command=N'EXEC FLX_DBA..DBA_Monitor_Log_Backup', 
+		@database_name=N'FLX_DBA', 
+		@flags=0
+IF (@@ERROR <> 0 OR @ReturnCode <> 0) GOTO QuitWithRollback
+EXEC @ReturnCode = msdb.dbo.sp_update_job @job_id = @jobId, @start_step_id = 1
+IF (@@ERROR <> 0 OR @ReturnCode <> 0) GOTO QuitWithRollback
+EXEC @ReturnCode = msdb.dbo.sp_add_jobschedule @job_id=@jobId, @name=N'DBA_Monitor_Log_Backups', 
+		@enabled=1, 
+		@freq_type=4, 
+		@freq_interval=1, 
+		@freq_subday_type=4, 
+		@freq_subday_interval=10, 
+		@freq_relative_interval=0, 
+		@freq_recurrence_factor=0, 
+		@active_start_date=20160727, 
+		@active_end_date=99991231, 
+		@active_start_time=100, 
+		@active_end_time=235959, 
+		@schedule_uid=N'51fcf37a-6df9-4b22-8e75-3c14b7816cd2'
+IF (@@ERROR <> 0 OR @ReturnCode <> 0) GOTO QuitWithRollback
+EXEC @ReturnCode = msdb.dbo.sp_add_jobserver @job_id = @jobId, @server_name = N'(local)'
+IF (@@ERROR <> 0 OR @ReturnCode <> 0) GOTO QuitWithRollback
+COMMIT TRANSACTION
+GOTO EndSave
+QuitWithRollback:
+    IF (@@TRANCOUNT > 0) ROLLBACK TRANSACTION
+EndSave:
+GO
+
+/****** Object:  Job [DBA_Rename_Drop_FLX_DBA_TempTables]    Script Date: 10/7/2022 3:33:29 PM ******/
+BEGIN TRANSACTION
+DECLARE @ReturnCode INT
+SELECT @ReturnCode = 0
+/****** Object:  JobCategory [[Uncategorized (Local)]]    Script Date: 10/7/2022 3:33:29 PM ******/
+IF NOT EXISTS (SELECT name FROM msdb.dbo.syscategories WHERE name=N'[Uncategorized (Local)]' AND category_class=1)
+BEGIN
+EXEC @ReturnCode = msdb.dbo.sp_add_category @class=N'JOB', @type=N'LOCAL', @name=N'[Uncategorized (Local)]'
+IF (@@ERROR <> 0 OR @ReturnCode <> 0) GOTO QuitWithRollback
+
+END
+
+DECLARE @jobId BINARY(16)
+EXEC @ReturnCode =  msdb.dbo.sp_add_job @job_name=N'DBA_Rename_Drop_FLX_DBA_TempTables', 
+		@enabled=1, 
+		@notify_level_eventlog=0, 
+		@notify_level_email=2, 
+		@notify_level_netsend=0, 
+		@notify_level_page=0, 
+		@delete_level=0, 
+		@description=N'No description available.', 
+		@category_name=N'[Uncategorized (Local)]', 
+		@owner_login_name=N'FLXPRD\sql_jobs', 
+		@notify_email_operator_name=N'DBA_Operator', @job_id = @jobId OUTPUT
+IF (@@ERROR <> 0 OR @ReturnCode <> 0) GOTO QuitWithRollback
+/****** Object:  Step [DBA_Rename_Drop_FLX_DBA_TempTables]    Script Date: 10/7/2022 3:33:29 PM ******/
+EXEC @ReturnCode = msdb.dbo.sp_add_jobstep @job_id=@jobId, @step_name=N'DBA_Rename_Drop_FLX_DBA_TempTables', 
+		@step_id=1, 
+		@cmdexec_success_code=0, 
+		@on_success_action=1, 
+		@on_success_step_id=0, 
+		@on_fail_action=2, 
+		@on_fail_step_id=0, 
+		@retry_attempts=0, 
+		@retry_interval=0, 
+		@os_run_priority=0, @subsystem=N'TSQL', 
+		@command=N'use FLX_DBA
+go
+
+DECLARE @ownername NVARCHAR(128)
+DECLARE @TableName NVARCHAR(128)
+DECLARE @strSQL as NVARCHAR(max)
+DECLARE @DroppedBY NVARCHAR(128)
+DECLARE @strToday NVARCHAR(128)
+
+SET @DroppedBY = (SELECT CONVERT(VARCHAR(8), GETDATE()+90, 112))
+SET @strToday = (SELECT CONVERT(VARCHAR(8), GETDATE(), 112))
+SET @strToday = ''DROP_BY_'' + @strToday
+
+--select @DroppedBY
+--select @strToday
+
+DECLARE Mycursor CURSOR 
+FOR
+select name from flx_dba.sys.tables
+where name not like ''DBA_%'' and name not like ''DROP_BY%''
+order by name
+
+OPEN Mycursor
+
+
+FETCH next FROM Mycursor INTO @TableName 
+
+
+WHILE @@fetch_status = 0
+BEGIN
+
+
+SET @strSQL= N''
+exec sp_rename '''''' + @TableName +'''''', ''''DROP_BY_'' + @DroppedBY +''_''+@TableName + ''''''''
+
+
+print @strSQL
+EXEC sp_ExecuteSQL @strSQL
+
+FETCH next FROM Mycursor INTO  @TableName
+END
+
+
+
+CLOSE Mycursor
+DEALLOCATE Mycursor
+
+
+--  Drop old tables
+DECLARE Mycursor CURSOR 
+FOR
+select name from flx_dba.sys.tables
+where substring(name,1,16) =  @strToday
+order by name
+
+OPEN Mycursor
+
+
+FETCH next FROM Mycursor INTO @TableName 
+
+
+WHILE @@fetch_status = 0
+BEGIN
+
+
+SET @strSQL= N''
+DROP TABLE FLX_DBA..['' + @TableName +'']''
+
+
+print @strSQL
+EXEC sp_ExecuteSQL @strSQL
+
+FETCH next FROM Mycursor INTO  @TableName
+END
+
+
+
+CLOSE Mycursor
+DEALLOCATE Mycursor
+
+', 
+		@database_name=N'FLX_DBA', 
+		@output_file_name=N'c:\SQL_Temp\DBA_Rename_Drop_FLX_DBA_TempTables.txt', 
+		@flags=0
+IF (@@ERROR <> 0 OR @ReturnCode <> 0) GOTO QuitWithRollback
+EXEC @ReturnCode = msdb.dbo.sp_update_job @job_id = @jobId, @start_step_id = 1
+IF (@@ERROR <> 0 OR @ReturnCode <> 0) GOTO QuitWithRollback
+EXEC @ReturnCode = msdb.dbo.sp_add_jobschedule @job_id=@jobId, @name=N'DBA_Rename_Drop_FLX_DBA_TempTables', 
+		@enabled=1, 
+		@freq_type=4, 
+		@freq_interval=1, 
+		@freq_subday_type=1, 
+		@freq_subday_interval=0, 
+		@freq_relative_interval=0, 
+		@freq_recurrence_factor=0, 
+		@active_start_date=20180314, 
+		@active_end_date=99991231, 
+		@active_start_time=54000, 
+		@active_end_time=235959, 
+		@schedule_uid=N'89437a9b-bdee-424e-865b-95d0e54adb02'
+IF (@@ERROR <> 0 OR @ReturnCode <> 0) GOTO QuitWithRollback
+EXEC @ReturnCode = msdb.dbo.sp_add_jobserver @job_id = @jobId, @server_name = N'(local)'
+IF (@@ERROR <> 0 OR @ReturnCode <> 0) GOTO QuitWithRollback
+COMMIT TRANSACTION
+GOTO EndSave
+QuitWithRollback:
+    IF (@@TRANCOUNT > 0) ROLLBACK TRANSACTION
+EndSave:
+GO
+
+/****** Object:  Job [Disk Drive Check]    Script Date: 10/7/2022 3:33:29 PM ******/
+BEGIN TRANSACTION
+DECLARE @ReturnCode INT
+SELECT @ReturnCode = 0
+/****** Object:  JobCategory [[Uncategorized (Local)]]    Script Date: 10/7/2022 3:33:29 PM ******/
+IF NOT EXISTS (SELECT name FROM msdb.dbo.syscategories WHERE name=N'[Uncategorized (Local)]' AND category_class=1)
+BEGIN
+EXEC @ReturnCode = msdb.dbo.sp_add_category @class=N'JOB', @type=N'LOCAL', @name=N'[Uncategorized (Local)]'
+IF (@@ERROR <> 0 OR @ReturnCode <> 0) GOTO QuitWithRollback
+
+END
+
+DECLARE @jobId BINARY(16)
+EXEC @ReturnCode =  msdb.dbo.sp_add_job @job_name=N'Disk Drive Check', 
+		@enabled=1, 
+		@notify_level_eventlog=0, 
+		@notify_level_email=2, 
+		@notify_level_netsend=0, 
+		@notify_level_page=0, 
+		@delete_level=0, 
+		@description=N'No description available.', 
+		@category_name=N'[Uncategorized (Local)]', 
+		@owner_login_name=N'FLXPRD\sql_jobs', 
+		@notify_email_operator_name=N'DBA_Operator', @job_id = @jobId OUTPUT
+IF (@@ERROR <> 0 OR @ReturnCode <> 0) GOTO QuitWithRollback
+/****** Object:  Step [S1]    Script Date: 10/7/2022 3:33:29 PM ******/
+EXEC @ReturnCode = msdb.dbo.sp_add_jobstep @job_id=@jobId, @step_name=N'S1', 
+		@step_id=1, 
+		@cmdexec_success_code=0, 
+		@on_success_action=1, 
+		@on_success_step_id=0, 
+		@on_fail_action=2, 
+		@on_fail_step_id=0, 
+		@retry_attempts=0, 
+		@retry_interval=0, 
+		@os_run_priority=0, @subsystem=N'TSQL', 
+		@command=N'DECLARE	@Drive TINYINT,
+	    @SQL VARCHAR(100),
+	    @DriveLetter varchar(5)  
+
+
+set Nocount on
+
+SET	@Drive = 97
+
+-- Setup Staging Area
+DECLARE	@Drives TABLE
+	(
+		Drive CHAR(1),
+		Info VARCHAR(80)
+	)
+
+WHILE @Drive <= 122
+	BEGIN
+		SET	@SQL = ''EXEC XP_CMDSHELL ''''fsutil volume diskfree '' + CHAR(@Drive) + '':''''''
+		
+		INSERT	@Drives
+			(
+				Info
+			)
+		EXEC	(@SQL)
+
+		UPDATE	@Drives
+		SET	Drive = CHAR(@Drive)
+		WHERE	Drive IS NULL
+
+		SET	@Drive = @Drive + 1
+	END
+
+-- Show the expected output
+SELECT		Drive,
+		SUM(CASE WHEN Info LIKE ''Total # of bytes             : %'' THEN CAST(REPLACE(SUBSTRING(Info, 32, 48), CHAR(13), '''') AS BIGINT) ELSE CAST(0 AS BIGINT) END) AS TotalBytes,
+		SUM(CASE WHEN Info LIKE ''Total # of free bytes        : %'' THEN CAST(REPLACE(SUBSTRING(Info, 32, 48), CHAR(13), '''') AS BIGINT) ELSE CAST(0 AS BIGINT) END) AS FreeBytes,
+		SUM(CASE WHEN Info LIKE ''Total # of avail free bytes  : %'' THEN CAST(REPLACE(SUBSTRING(Info, 32, 48), CHAR(13), '''') AS BIGINT) ELSE CAST(0 AS BIGINT) END) AS AvailFreeBytes
+into #DriveResults         
+FROM		(
+			SELECT	Drive,
+				Info
+			FROM	@Drives
+			WHERE	Info LIKE ''Total # of %''
+		) AS d
+GROUP BY	Drive
+ORDER BY	Drive
+ 
+ 
+Select Drive, ((FreeBytes * 100) / (TotalBytes)) as PercentageFree
+      into #DriveRpt
+     From #DriveResults 
+       
+SET @DriveLetter = ''''
+
+Select @DriveLetter = Drive 
+    from #DriveRpt
+     Where PercentageFree <  10
+       
+DROP TABLE   #DriveResults 
+DROP TABLE   #DriveRpt 
+
+---MAIL IT------------------------------------------------------------------------------------------------------------
+
+ Declare @body1  nvarchar(255)
+  
+ if(@DriveLetter <> '''')
+  BEGIN
+         set  @body1  = ''WARNING: Less than 10% Disk Drive Free Space On DB3010CSQLMITC3 80.223. Drive:  '' 
+                         + @DriveLetter + ''.  Please Check All Drives On This Server.''
+                         
+		 EXEC msdb.dbo.sp_send_dbmail @recipients= ''dba@farelogix.com'',
+		 @subject = ''PROD DISK SPACE CHECK'',
+		 @body = @body1,
+              		 @profile_name = ''FLX_DBA_MAIL'',
+		 @body_format = ''HTML''
+  END     
+', 
+		@database_name=N'master', 
+		@flags=4
+IF (@@ERROR <> 0 OR @ReturnCode <> 0) GOTO QuitWithRollback
+EXEC @ReturnCode = msdb.dbo.sp_update_job @job_id = @jobId, @start_step_id = 1
+IF (@@ERROR <> 0 OR @ReturnCode <> 0) GOTO QuitWithRollback
+EXEC @ReturnCode = msdb.dbo.sp_add_jobschedule @job_id=@jobId, @name=N'Sched1', 
+		@enabled=1, 
+		@freq_type=8, 
+		@freq_interval=127, 
+		@freq_subday_type=1, 
+		@freq_subday_interval=0, 
+		@freq_relative_interval=0, 
+		@freq_recurrence_factor=1, 
+		@active_start_date=20130710, 
+		@active_end_date=99991231, 
+		@active_start_time=20000, 
+		@active_end_time=235959, 
+		@schedule_uid=N'aff6a746-a3f1-4a7e-a5fc-8c7df4ae9f9f'
+IF (@@ERROR <> 0 OR @ReturnCode <> 0) GOTO QuitWithRollback
+EXEC @ReturnCode = msdb.dbo.sp_add_jobserver @job_id = @jobId, @server_name = N'(local)'
+IF (@@ERROR <> 0 OR @ReturnCode <> 0) GOTO QuitWithRollback
+COMMIT TRANSACTION
+GOTO EndSave
+QuitWithRollback:
+    IF (@@TRANCOUNT > 0) ROLLBACK TRANSACTION
+EndSave:
+GO
+
+
