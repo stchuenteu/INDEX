@@ -48,6 +48,22 @@ DEALLOCATE fixusers
 
 
 
+-------------BRING LOGSHIPPING ONLINE   -----------------------------
+
+----Backup jobs
+EXEC MSDB..sp_start_job @job_name = 'LSBackup_FLXLKP'                                     --Backup jobs Name from source server
+
+
+
+---Copy jobs
+EXEC MSDB..sp_start_job @job_name = 'LSCopy_MISDB004CMITC1\MISDB004CMITC1_FLXLKP'        -- 'LSCopy_MISDB004CMITC1\MISDB004CMITC1_FLXLKP' is copy jobs Name from Target server
+
+
+--Restore jobs
+EXEC MSDB..sp_start_job @job_name = 'LSRestore_MISDB004CMITC1\MISDB004CMITC1_FLXLKP'    -- 'LSRestore_MISDB004CMITC1\MISDB004CMITC1_FLXLKP' restore jobs Name from Target server
+
+
+
 
 
 
