@@ -55,16 +55,16 @@ DEALLOCATE fixusers
 
 
 ----Backup jobs
-EXEC MSDB..sp_start_job @job_name = 'Backup jobs Name'                                     --This is apply at the source server
+EXEC MSDB..sp_start_job @job_name = 'jobs Name'                                     --This is apply at the source server
 
 
 
 ---Copy jobs
-EXEC MSDB..sp_start_job @job_name = 'copy jobs Name from Target'                          --  Apply at the target
+EXEC MSDB..sp_start_job @job_name = 'jobs Name '                          --  Apply at the target
 
 
 --Restore jobs
-EXEC MSDB..sp_start_job @job_name = 'restore jobs Name from Target server'               -- Apply at the target
+EXEC MSDB..sp_start_job @job_name = 'jobs Name '               -- Apply at the target
 
 
 --Bring db online
